@@ -2,96 +2,23 @@
 URL configuration for School Portal project
 """
 from django.contrib import admin
-from django.urls import path, include, re_path
+from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 from apps.users.views import UserViewSet, AuthViewSet
 from apps.centres.views import CentreViewSet, HolidayViewSet, TermDateViewSet
 from apps.classes.views import ClassViewSet
 from apps.homework.views import HomeworkViewSet, SubmissionViewSet
 from apps.calendar.views import EventViewSet
 from apps.whiteboard.views import WhiteboardSessionViewSet
-
-# Swagger/OpenAPI Schema
-schema_view = get_schema_view(
-    openapi.Info(
-        title="School Portal API",
-        default_version='v1',
-        description="""
-# School Portal API Documentation
-
-A comprehensive multi-centre school management system with role-based access control.
-
-## Authentication
-
-This API uses JWT (JSON Web Token) authentication. To authenticate:
-
-1. Obtain tokens by calling `/api/auth/login/` with email and password
-2. Use the access token in the Authorization header: `Bearer <access_token>`
-3. Refresh tokens when they expire using `/api/auth/refresh/`
-
-## User Roles
-
-- **SUPER_ADMIN**: Full system access across all centres
-- **CENTRE_MANAGER**: Manage one centre (classes, teachers, students)
-- **TEACHER**: Access assigned classes only (homework, grading, whiteboard)
-- **STUDENT**: Access own homework, classes, and events
-- **PARENT**: View linked students' information
-
-## Multi-Centre Support
-
-The system supports multiple centres with full data isolation. Users (except Super Admin) 
-only have access to data from their assigned centre.
-
-## Features
-
-### Phase 1: Core Features
-- User management and authentication
-- Centre management with holidays and term dates
-- Class management with teacher assignments
-- Homework creation, submission, and grading
-- Calendar and event management
-
-### Phase 2: Enhanced Features
-- Real-time whiteboard collaboration (WebSocket)
-- Role-specific dashboards
-- Parent-student linking
-- Student profiles with privacy protection
-
-### Phase 3: Advanced Features
-- Analytics and reporting
-- Email notifications
-- Background task processing
-- SMS integration (optional)
-
-## Rate Limiting
-
-- Anonymous requests: 100 per hour
-- Authenticated requests: 1000 per hour
-
-## Pagination
-
-List endpoints return paginated results (20 items per page by default).
-Use `?page=2` to navigate pages.
-
-## File Uploads
-
-Maximum file size: 10MB
-Supported formats: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, ZIP
-        """,
-        terms_of_service="",
-        contact=openapi.Contact(email="support@schoolportal.com"),
-        license=openapi.License(name="Proprietary"),
-    ),
-    public=True,
-    permission_classes=[permissions.AllowAny],
-    authentication_classes=[],
-)
 
 # Create router for API endpoints
 router = DefaultRouter()
@@ -111,11 +38,15 @@ urlpatterns = [
     # Admin
     path('admin/', admin.site.urls),
     
-    # Swagger/OpenAPI Documentation
-    re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
-    path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
-    path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    path('api-docs/', schema_view.with_ui('swagger', cache_timeout=0), name='api-docs'),
+    # OpenAPI 3.0 Documentation (drf-spectacular)
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('api-docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='api-docs'),
+    
+    # Download schema in different formats
+    path('api/schema.json', SpectacularAPIView.as_view(format='json'), name='schema-json'),
+    path('api/schema.yaml', SpectacularAPIView.as_view(format='yaml'), name='schema-yaml'),
     
     # API endpoints
     path('api/', include(router.urls)),
@@ -145,7 +76,7 @@ urlpatterns = [
     ])),
     
     # Health check endpoint
-    path('api/health/', lambda request: __import__('django.http').JsonResponse({'status': 'ok'})),
+    path('api/health/', lambda request: JsonResponse({'status': 'ok'})),
 ]
 
 # Serve media files in development

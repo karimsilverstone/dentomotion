@@ -34,7 +34,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'corsheaders',
-    'drf_yasg',
+    'drf_spectacular',
     
     # Local apps
     'apps.users',
@@ -171,6 +171,132 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
     ],
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# DRF Spectacular Settings (OpenAPI 3.0)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'School Portal API',
+    'DESCRIPTION': '''
+# School Portal API Documentation
+
+A comprehensive multi-centre school management system with role-based access control.
+
+## Authentication
+
+This API uses JWT (JSON Web Token) authentication. To authenticate:
+
+1. Obtain tokens by calling `/api/auth/login/` with email and password
+2. Use the access token in the Authorization header: `Bearer <access_token>`
+3. Refresh tokens when they expire using `/api/auth/refresh/`
+
+## User Roles
+
+- **SUPER_ADMIN**: Full system access across all centres
+- **CENTRE_MANAGER**: Manage one centre (classes, teachers, students)
+- **TEACHER**: Access assigned classes only (homework, grading, whiteboard)
+- **STUDENT**: Access own homework, classes, and events
+- **PARENT**: View linked students' information
+
+## Multi-Centre Support
+
+The system supports multiple centres with full data isolation. Users (except Super Admin) 
+only have access to data from their assigned centre.
+
+## Features
+
+### Phase 1: Core Features
+- User management and authentication
+- Centre management with holidays and term dates
+- Class management with teacher assignments
+- Homework creation, submission, and grading
+- Calendar and event management
+
+### Phase 2: Enhanced Features
+- Real-time whiteboard collaboration (WebSocket)
+- Role-specific dashboards
+- Parent-student linking
+- Student profiles with privacy protection
+
+### Phase 3: Advanced Features
+- Analytics and reporting
+- Email notifications
+- Background task processing
+- SMS integration (optional)
+
+## Rate Limiting
+
+- Anonymous requests: 100 per hour
+- Authenticated requests: 1000 per hour
+
+## Pagination
+
+List endpoints return paginated results (20 items per page by default).
+Use `?page=2` to navigate pages.
+
+## File Uploads
+
+Maximum file size: 10MB
+Supported formats: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, ZIP
+    ''',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/',
+    
+    # Contact and License
+    'CONTACT': {'email': 'support@schoolportal.com'},
+    'LICENSE': {'name': 'Proprietary'},
+    
+    # Security schemes
+    'SECURITY': [{'Bearer': []}],
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'Bearer': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+                'description': 'Enter JWT token obtained from /api/auth/login/'
+            }
+        }
+    },
+    
+    # Tags for organizing endpoints
+    'TAGS': [
+        {'name': 'Authentication', 'description': 'Login, logout, token refresh, password reset'},
+        {'name': 'Users', 'description': 'User management and profiles'},
+        {'name': 'Centres', 'description': 'Centre management, holidays, term dates'},
+        {'name': 'Classes', 'description': 'Class management, enrolments, teacher assignments'},
+        {'name': 'Homework', 'description': 'Homework assignments and submissions'},
+        {'name': 'Calendar', 'description': 'Events and calendar management'},
+        {'name': 'Whiteboard', 'description': 'Real-time whiteboard sessions'},
+        {'name': 'Dashboards', 'description': 'Role-specific dashboard data'},
+        {'name': 'Analytics', 'description': 'Reports and analytics'},
+    ],
+    
+    # Swagger UI settings
+    'SWAGGER_UI_SETTINGS': {
+        'deepLinking': True,
+        'persistAuthorization': True,
+        'displayOperationId': False,
+        'filter': True,
+        'docExpansion': 'none',
+        'defaultModelsExpandDepth': 2,
+        'defaultModelExpandDepth': 2,
+    },
+    
+    # Redoc settings
+    'REDOC_UI_SETTINGS': {
+        'hideDownloadButton': False,
+        'disableSearch': False,
+    },
+    
+    # Enum naming
+    'ENUM_NAME_OVERRIDES': {
+        'UserRoleEnum': 'apps.users.models.User.Role',
+        'SubmissionStatusEnum': 'apps.homework.models.Submission.Status',
+        'EventTypeEnum': 'apps.calendar.models.Event.EventType',
+    },
 }
 
 # JWT Settings

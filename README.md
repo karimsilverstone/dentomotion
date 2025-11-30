@@ -303,17 +303,24 @@ pytest --cov=apps --cov-report=html
 
 ## API Documentation
 
-Interactive API documentation is available at:
+Interactive API documentation is available using **OpenAPI 3.0** (latest version):
+
 - **Swagger UI**: `/swagger/` or `/api-docs/` (interactive, try endpoints)
 - **ReDoc**: `/redoc/` (clean documentation view)
-- **OpenAPI Schema**: `/swagger.json` or `/swagger.yaml`
+- **OpenAPI Schema**: `/api/schema.json` or `/api/schema.yaml`
 
 ### Using Swagger UI
 
-1. Navigate to `https://your-domain.com/swagger/`
-2. Click "Authorize" and enter: `Bearer <your-access-token>`
+1. Navigate to `http://your-domain.com/swagger/`
+2. Click "Authorize" (🔓) and enter your access token
 3. Try out any endpoint interactively
 4. See request/response examples for all endpoints
+
+### OpenAPI 3.0 Features
+- JWT Bearer authentication with persistent authorization
+- Improved request/response schemas
+- Better file upload documentation
+- Searchable and filterable endpoints
 
 For detailed instructions, see [SWAGGER_DOCUMENTATION.md](SWAGGER_DOCUMENTATION.md)
 
@@ -348,5 +355,6 @@ Proprietary - All rights reserved
 ---
 
 **Note**: This backend is designed to be deployed with Docker on a VPS. All Phase 1, 2, and 3 features are fully implemented and ready for deployment.
-#   d e n t o m o t i o n  
+#   d e n t o m o t i o n 
+ 
  

@@ -12,8 +12,8 @@ Pillow==10.1.0
 # Filtering
 django-filter==23.3
 
-# API Documentation
-drf-yasg==1.21.7
+# API Documentation (OpenAPI 3.0)
+drf-spectacular==0.27.0
 
 # CORS headers
 django-cors-headers==4.3.0
