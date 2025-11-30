@@ -69,6 +69,27 @@ class PasswordChangeSerializer(serializers.Serializer):
         return attrs
 
 
+class LoginSerializer(serializers.Serializer):
+    """Serializer for login request"""
+    
+    email = serializers.EmailField(required=True, help_text="User's email address")
+    password = serializers.CharField(required=True, write_only=True, help_text="User's password")
+
+
+class LoginResponseSerializer(serializers.Serializer):
+    """Serializer for login response"""
+    
+    access = serializers.CharField(help_text="JWT access token")
+    refresh = serializers.CharField(help_text="JWT refresh token")
+    user = UserSerializer(help_text="User details")
+
+
+class LogoutSerializer(serializers.Serializer):
+    """Serializer for logout request"""
+    
+    refresh = serializers.CharField(required=True, help_text="Refresh token to blacklist")
+
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     """Serializer for password reset request"""
     

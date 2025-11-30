@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import WhiteboardSession, WhiteboardSnapshot
 from .serializers import (
     WhiteboardSessionSerializer, WhiteboardSessionCreateSerializer,
@@ -9,6 +10,14 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Whiteboard Sessions", tags=['Whiteboard']),
+    create=extend_schema(summary="Create Whiteboard Session", tags=['Whiteboard']),
+    retrieve=extend_schema(summary="Get Whiteboard Session Details", tags=['Whiteboard']),
+    update=extend_schema(summary="Update Whiteboard Session", tags=['Whiteboard']),
+    partial_update=extend_schema(summary="Partial Update Whiteboard Session", tags=['Whiteboard']),
+    destroy=extend_schema(summary="Delete Whiteboard Session", tags=['Whiteboard']),
+)
 class WhiteboardSessionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Whiteboard Sessions

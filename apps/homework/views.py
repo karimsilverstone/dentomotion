@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import Homework, Submission
 from .serializers import (
     HomeworkSerializer, HomeworkCreateSerializer, HomeworkUpdateSerializer,
@@ -9,6 +10,14 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Homework", tags=['Homework']),
+    create=extend_schema(summary="Create Homework", tags=['Homework']),
+    retrieve=extend_schema(summary="Get Homework Details", tags=['Homework']),
+    update=extend_schema(summary="Update Homework", tags=['Homework']),
+    partial_update=extend_schema(summary="Partial Update Homework", tags=['Homework']),
+    destroy=extend_schema(summary="Delete Homework", tags=['Homework']),
+)
 class HomeworkViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Homework management
@@ -202,6 +211,10 @@ class HomeworkViewSet(viewsets.ModelViewSet):
         return Response(SubmissionSerializer(submission).data)
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Submissions", tags=['Homework']),
+    retrieve=extend_schema(summary="Get Submission Details", tags=['Homework']),
+)
 class SubmissionViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for viewing submissions

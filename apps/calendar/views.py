@@ -3,10 +3,19 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import Event
 from .serializers import EventSerializer, EventCreateSerializer
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Events", tags=['Calendar']),
+    create=extend_schema(summary="Create Event", tags=['Calendar']),
+    retrieve=extend_schema(summary="Get Event Details", tags=['Calendar']),
+    update=extend_schema(summary="Update Event", tags=['Calendar']),
+    partial_update=extend_schema(summary="Partial Update Event", tags=['Calendar']),
+    destroy=extend_schema(summary="Delete Event", tags=['Calendar']),
+)
 class EventViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Event management with visibility rules

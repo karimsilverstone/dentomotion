@@ -4,10 +4,14 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 from .models import User, ActivityLog
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
-    PasswordChangeSerializer, ActivityLogSerializer
+    PasswordChangeSerializer, ActivityLogSerializer,
+    LoginSerializer, LoginResponseSerializer, LogoutSerializer,
+    PasswordResetRequestSerializer
 )
 
 
@@ -32,6 +36,14 @@ def log_activity(user, action_type, description, request):
     )
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Users", tags=['Users']),
+    create=extend_schema(summary="Create User", tags=['Users']),
+    retrieve=extend_schema(summary="Get User Details", tags=['Users']),
+    update=extend_schema(summary="Update User", tags=['Users']),
+    partial_update=extend_schema(summary="Partial Update User", tags=['Users']),
+    destroy=extend_schema(summary="Delete User", tags=['Users']),
+)
 class UserViewSet(viewsets.ModelViewSet):
     """
     ViewSet for User model
@@ -117,6 +129,17 @@ class AuthViewSet(viewsets.ViewSet):
     
     permission_classes = [permissions.AllowAny]
     
+    @extend_schema(
+        summary="User Login",
+        description="Authenticate user with email and password. Returns JWT access and refresh tokens.",
+        request=LoginSerializer,
+        responses={
+            200: LoginResponseSerializer,
+            401: {'description': 'Invalid credentials'},
+            403: {'description': 'Account locked'},
+        },
+        tags=['Authentication']
+    )
     @action(detail=False, methods=['post'])
     def login(self, request):
         """Login endpoint with JWT token generation"""
@@ -175,6 +198,16 @@ class AuthViewSet(viewsets.ViewSet):
                 status=status.HTTP_401_UNAUTHORIZED
             )
     
+    @extend_schema(
+        summary="User Logout",
+        description="Logout user by blacklisting the refresh token.",
+        request=LogoutSerializer,
+        responses={
+            200: {'description': 'Logged out successfully'},
+            400: {'description': 'Invalid token'},
+        },
+        tags=['Authentication']
+    )
     @action(detail=False, methods=['post'])
     def logout(self, request):
         """Logout endpoint (blacklist refresh token)"""
@@ -190,9 +223,18 @@ class AuthViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
     
+    @extend_schema(
+        summary="Password Reset",
+        description="Initiate password reset process. Sends reset email to user.",
+        request=PasswordResetRequestSerializer,
+        responses={
+            200: {'description': 'Password reset email sent'},
+        },
+        tags=['Authentication']
+    )
     @action(detail=False, methods=['post'], url_path='password-reset')
     def password_reset(self, request):
-        """Initiate password reset (sends email)"""
+        """Initiate password reset process. Sends reset email to user."""
         # This will be implemented in Phase 3 with email integration
         return Response({
             'message': 'Password reset functionality will be available in Phase 3.'

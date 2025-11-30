@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import Class, TeacherAssignment, Enrolment
 from .serializers import (
     ClassSerializer, ClassCreateSerializer,
@@ -8,6 +9,14 @@ from .serializers import (
 )
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List Classes", tags=['Classes']),
+    create=extend_schema(summary="Create Class", tags=['Classes']),
+    retrieve=extend_schema(summary="Get Class Details", tags=['Classes']),
+    update=extend_schema(summary="Update Class", tags=['Classes']),
+    partial_update=extend_schema(summary="Partial Update Class", tags=['Classes']),
+    destroy=extend_schema(summary="Delete Class", tags=['Classes']),
+)
 class ClassViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Class model with centre-based filtering
