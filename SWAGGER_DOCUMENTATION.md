@@ -33,9 +33,8 @@ OpenAPI 3.0 is the latest version of the OpenAPI Specification (formerly Swagger
   - Download button for schema
 
 ### OpenAPI 3.0 Schema
-- **JSON**: `http://your-domain.com/api/schema.json`
-- **YAML**: `http://your-domain.com/api/schema.yaml`
-- **Raw**: `http://your-domain.com/api/schema/`
+- **Download**: `http://your-domain.com/api/schema/`
+- Add `?format=json` or `?format=yaml` for specific formats
 - Import into Postman, Insomnia, or other API clients
 
 ## Using Swagger UI
@@ -358,9 +357,9 @@ SPECTACULAR_SETTINGS = {
 |----------|-----|
 | Swagger UI | `/swagger/` or `/api-docs/` |
 | ReDoc | `/redoc/` |
-| OpenAPI Schema (JSON) | `/api/schema.json` |
-| OpenAPI Schema (YAML) | `/api/schema.yaml` |
-| Raw Schema | `/api/schema/` |
+| OpenAPI Schema | `/api/schema/` |
+| Schema as JSON | `/api/schema/?format=json` |
+| Schema as YAML | `/api/schema/?format=yaml` |
 
 ---
 

@@ -44,10 +44,6 @@ urlpatterns = [
     path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('api-docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='api-docs'),
     
-    # Download schema in different formats
-    path('api/schema.json', SpectacularAPIView.as_view(format='json'), name='schema-json'),
-    path('api/schema.yaml', SpectacularAPIView.as_view(format='yaml'), name='schema-yaml'),
-    
     # API endpoints
     path('api/', include(router.urls)),
     
