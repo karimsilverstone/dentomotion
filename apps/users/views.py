@@ -40,6 +40,35 @@ def log_activity(user, action_type, description, request):
     list=extend_schema(
         summary="List Users",
         tags=['Users'],
+        description="""
+        List users with optional role filtering.
+        
+        **Filter by Role (2 options):**
+        
+        1. **Single role** - Use `role` parameter:
+           - `?role=TEACHER` - Get only teachers
+           - `?role=STUDENT` - Get only students
+        
+        2. **Multiple roles** - Use `roles` parameter:
+           - `?roles=TEACHER,STUDENT` - Get teachers and students
+           - `?roles=TEACHER,STUDENT,PARENT` - Get multiple roles
+        
+        **Available Roles:**
+        - SUPER_ADMIN
+        - CENTRE_MANAGER
+        - TEACHER
+        - STUDENT
+        - PARENT
+        
+        **Examples:**
+        - `/api/users/` - All users (based on permissions)
+        - `/api/users/?role=TEACHER` - Only teachers
+        - `/api/users/?roles=TEACHER,STUDENT` - Teachers and students
+        - `/api/users/?role=STUDENT&page=2` - Students on page 2
+        - `/api/users/?roles=TEACHER,PARENT&page_size=50` - Teachers and parents (50 per page)
+        
+        **Note:** If both `role` and `roles` are provided, `roles` takes priority.
+        """,
         parameters=[
             OpenApiParameter(
                 name='page',
@@ -52,6 +81,21 @@ def log_activity(user, action_type, description, request):
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
                 description='Number of items per page (max 100)'
+            ),
+            OpenApiParameter(
+                name='role',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Filter by single role (e.g., TEACHER, STUDENT, PARENT)',
+                required=False,
+                enum=['SUPER_ADMIN', 'CENTRE_MANAGER', 'TEACHER', 'STUDENT', 'PARENT']
+            ),
+            OpenApiParameter(
+                name='roles',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Filter by multiple roles, comma-separated (e.g., TEACHER,STUDENT). Takes priority over "role"',
+                required=False
             ),
         ]
     ),
@@ -71,19 +115,33 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        """Filter users based on role"""
+        """Filter users based on role and optional roles parameter"""
         user = self.request.user
         
-        # Super Admin sees all users
+        # Base queryset based on user's role
         if user.role == 'SUPER_ADMIN':
-            return User.objects.all()
-        
-        # Centre Manager sees users in their centre
+            queryset = User.objects.all()
         elif user.role == 'CENTRE_MANAGER':
-            return User.objects.filter(centre=user.centre)
+            queryset = User.objects.filter(centre=user.centre)
+        else:
+            queryset = User.objects.filter(id=user.id)
         
-        # Others see only themselves
-        return User.objects.filter(id=user.id)
+        # Apply role filtering if provided
+        # Support both 'roles' (comma-separated) and 'role' (single)
+        roles_param = self.request.query_params.get('roles', None)
+        role_param = self.request.query_params.get('role', None)
+        
+        if roles_param:
+            # Priority to 'roles' - supports comma-separated values
+            # Example: ?roles=TEACHER,STUDENT,PARENT
+            roles_list = [role.strip().upper() for role in roles_param.split(',')]
+            queryset = queryset.filter(role__in=roles_list)
+        elif role_param:
+            # Fallback to 'role' - single value
+            # Example: ?role=TEACHER
+            queryset = queryset.filter(role=role_param.strip().upper())
+        
+        return queryset
     
     def get_serializer_class(self):
         if self.action == 'create':
