@@ -2,7 +2,8 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from .models import Homework, Submission
 from .serializers import (
     HomeworkSerializer, HomeworkCreateSerializer, HomeworkUpdateSerializer,
@@ -11,7 +12,24 @@ from .serializers import (
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Homework", tags=['Homework']),
+    list=extend_schema(
+        summary="List Homework",
+        tags=['Homework'],
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number for pagination'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of items per page (max 100)'
+            ),
+        ]
+    ),
     create=extend_schema(summary="Create Homework", tags=['Homework']),
     retrieve=extend_schema(summary="Get Homework Details", tags=['Homework']),
     update=extend_schema(summary="Update Homework", tags=['Homework']),
@@ -212,7 +230,24 @@ class HomeworkViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Submissions", tags=['Homework']),
+    list=extend_schema(
+        summary="List Submissions",
+        tags=['Homework'],
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number for pagination'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of items per page (max 100)'
+            ),
+        ]
+    ),
     retrieve=extend_schema(summary="Get Submission Details", tags=['Homework']),
 )
 class SubmissionViewSet(viewsets.ReadOnlyModelViewSet):

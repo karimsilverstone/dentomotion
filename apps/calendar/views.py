@@ -3,13 +3,31 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from .models import Event
 from .serializers import EventSerializer, EventCreateSerializer
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Events", tags=['Calendar']),
+    list=extend_schema(
+        summary="List Events",
+        tags=['Calendar'],
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number for pagination'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of items per page (max 100)'
+            ),
+        ]
+    ),
     create=extend_schema(summary="Create Event", tags=['Calendar']),
     retrieve=extend_schema(summary="Get Event Details", tags=['Calendar']),
     update=extend_schema(summary="Update Event", tags=['Calendar']),

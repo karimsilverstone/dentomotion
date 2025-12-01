@@ -1,7 +1,8 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from .models import Centre, Holiday, TermDate
 from .serializers import (
     CentreSerializer, CentreCreateSerializer,
@@ -10,7 +11,24 @@ from .serializers import (
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Centres", tags=['Centres']),
+    list=extend_schema(
+        summary="List Centres",
+        tags=['Centres'],
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number for pagination'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of items per page (max 100)'
+            ),
+        ]
+    ),
     create=extend_schema(summary="Create Centre", tags=['Centres']),
     retrieve=extend_schema(summary="Get Centre Details", tags=['Centres']),
     update=extend_schema(summary="Update Centre", tags=['Centres']),
@@ -121,7 +139,24 @@ class CentreViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Holidays", tags=['Centres']),
+    list=extend_schema(
+        summary="List Holidays",
+        tags=['Centres'],
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number for pagination'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of items per page (max 100)'
+            ),
+        ]
+    ),
     create=extend_schema(summary="Create Holiday", tags=['Centres']),
     retrieve=extend_schema(summary="Get Holiday Details", tags=['Centres']),
     update=extend_schema(summary="Update Holiday", tags=['Centres']),
@@ -147,7 +182,24 @@ class HolidayViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Term Dates", tags=['Centres']),
+    list=extend_schema(
+        summary="List Term Dates",
+        tags=['Centres'],
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number for pagination'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of items per page (max 100)'
+            ),
+        ]
+    ),
     create=extend_schema(summary="Create Term Date", tags=['Centres']),
     retrieve=extend_schema(summary="Get Term Date Details", tags=['Centres']),
     update=extend_schema(summary="Update Term Date", tags=['Centres']),

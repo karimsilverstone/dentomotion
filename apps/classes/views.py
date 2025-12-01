@@ -1,7 +1,8 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from .models import Class, TeacherAssignment, Enrolment
 from .serializers import (
     ClassSerializer, ClassCreateSerializer,
@@ -10,7 +11,24 @@ from .serializers import (
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Classes", tags=['Classes']),
+    list=extend_schema(
+        summary="List Classes",
+        tags=['Classes'],
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number for pagination'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of items per page (max 100)'
+            ),
+        ]
+    ),
     create=extend_schema(summary="Create Class", tags=['Classes']),
     retrieve=extend_schema(summary="Get Class Details", tags=['Classes']),
     update=extend_schema(summary="Update Class", tags=['Classes']),

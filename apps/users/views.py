@@ -37,7 +37,24 @@ def log_activity(user, action_type, description, request):
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List Users", tags=['Users']),
+    list=extend_schema(
+        summary="List Users",
+        tags=['Users'],
+        parameters=[
+            OpenApiParameter(
+                name='page',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Page number for pagination'
+            ),
+            OpenApiParameter(
+                name='page_size',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of items per page (max 100)'
+            ),
+        ]
+    ),
     create=extend_schema(summary="Create User", tags=['Users']),
     retrieve=extend_schema(summary="Get User Details", tags=['Users']),
     update=extend_schema(summary="Update User", tags=['Users']),
