@@ -41,7 +41,7 @@ def log_activity(user, action_type, description, request):
         summary="List Users",
         tags=['Users'],
         description="""
-        List users with optional role filtering.
+        List users with optional role and centre filtering.
         
         **Filter by Role (2 options):**
         
@@ -52,6 +52,15 @@ def log_activity(user, action_type, description, request):
         2. **Multiple roles** - Use `roles` parameter:
            - `?roles=TEACHER,STUDENT` - Get teachers and students
            - `?roles=TEACHER,STUDENT,PARENT` - Get multiple roles
+        
+        **Filter by Centre:**
+        - `?centre=1` - Get users in centre with ID 1
+        - `?centre=2` - Get users in centre with ID 2
+        
+        **Combine Filters:**
+        - `?role=TEACHER&centre=1` - Teachers in centre 1
+        - `?roles=TEACHER,STUDENT&centre=1` - Teachers and students in centre 1
+        - `?centre=1&page=2` - Users in centre 1, page 2
         
         **Available Roles:**
         - SUPER_ADMIN
@@ -64,10 +73,14 @@ def log_activity(user, action_type, description, request):
         - `/api/users/` - All users (based on permissions)
         - `/api/users/?role=TEACHER` - Only teachers
         - `/api/users/?roles=TEACHER,STUDENT` - Teachers and students
-        - `/api/users/?role=STUDENT&page=2` - Students on page 2
-        - `/api/users/?roles=TEACHER,PARENT&page_size=50` - Teachers and parents (50 per page)
+        - `/api/users/?centre=1` - Users in centre 1
+        - `/api/users/?role=TEACHER&centre=1` - Teachers in centre 1
+        - `/api/users/?roles=TEACHER,STUDENT&centre=2&page_size=50` - Teachers and students in centre 2
         
-        **Note:** If both `role` and `roles` are provided, `roles` takes priority.
+        **Notes:**
+        - If both `role` and `roles` are provided, `roles` takes priority
+        - Centre filter applies on top of permission-based filtering
+        - Super Admins can filter any centre, Centre Managers are limited to their centre
         """,
         parameters=[
             OpenApiParameter(
@@ -95,6 +108,13 @@ def log_activity(user, action_type, description, request):
                 type=OpenApiTypes.STR,
                 location=OpenApiParameter.QUERY,
                 description='Filter by multiple roles, comma-separated (e.g., TEACHER,STUDENT). Takes priority over "role"',
+                required=False
+            ),
+            OpenApiParameter(
+                name='centre',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Filter by centre ID (e.g., 1, 2, 3)',
                 required=False
             ),
         ]
@@ -140,6 +160,18 @@ class UserViewSet(viewsets.ModelViewSet):
             # Fallback to 'role' - single value
             # Example: ?role=TEACHER
             queryset = queryset.filter(role=role_param.strip().upper())
+        
+        # Apply centre filtering if provided
+        centre_param = self.request.query_params.get('centre', None)
+        if centre_param:
+            # Filter by centre ID
+            # Example: ?centre=1
+            try:
+                centre_id = int(centre_param)
+                queryset = queryset.filter(centre_id=centre_id)
+            except ValueError:
+                # Invalid centre ID, return empty queryset
+                queryset = queryset.none()
         
         return queryset
     
