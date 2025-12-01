@@ -53,8 +53,12 @@
 ### For Frontend Developers
 1. [SWAGGER_DOCUMENTATION.md](SWAGGER_DOCUMENTATION.md) - API testing
 2. [API_REFERENCE.md](API_REFERENCE.md) - Endpoint reference
-3. `/swagger/` - Interactive API docs
-4. `/redoc/` - Alternative API docs
+3. [../WHITEBOARD_FRONTEND_GUIDE.md](../WHITEBOARD_FRONTEND_GUIDE.md) - Whiteboard integration
+4. [../WHITEBOARD_QUICK_REFERENCE.md](../WHITEBOARD_QUICK_REFERENCE.md) - Whiteboard quick ref
+5. [../TEACHER_ASSIGNMENT_GUIDE.md](../TEACHER_ASSIGNMENT_GUIDE.md) - Teacher assignment guide
+6. [../TEACHER_ASSIGNMENT_QUICK_REFERENCE.md](../TEACHER_ASSIGNMENT_QUICK_REFERENCE.md) - Teacher assignment quick ref
+7. `/swagger/` - Interactive API docs
+8. `/redoc/` - Alternative API docs
 
 ### For Project Managers
 1. [IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md) - What's done
@@ -79,6 +83,10 @@
 |----------|---------|----------|
 | [API_REFERENCE.md](API_REFERENCE.md) | API quick reference | Developers |
 | [SWAGGER_DOCUMENTATION.md](SWAGGER_DOCUMENTATION.md) | Interactive docs guide | Developers |
+| [../WHITEBOARD_FRONTEND_GUIDE.md](../WHITEBOARD_FRONTEND_GUIDE.md) | Whiteboard WebSocket guide | Frontend Devs |
+| [../WHITEBOARD_QUICK_REFERENCE.md](../WHITEBOARD_QUICK_REFERENCE.md) | Whiteboard quick reference | Frontend Devs |
+| [../TEACHER_ASSIGNMENT_GUIDE.md](../TEACHER_ASSIGNMENT_GUIDE.md) | Teacher assignment guide | Frontend Devs |
+| [../TEACHER_ASSIGNMENT_QUICK_REFERENCE.md](../TEACHER_ASSIGNMENT_QUICK_REFERENCE.md) | Teacher assignment quick ref | Frontend Devs |
 | `/swagger/` | Live API docs | Developers |
 | `/redoc/` | Alternative API docs | Developers |
 
@@ -124,6 +132,12 @@
 
 ### "How do I test the API?"
 → Go to `/swagger/` after deployment
+
+### "How do I implement the whiteboard?"
+→ Read [../WHITEBOARD_FRONTEND_GUIDE.md](../WHITEBOARD_FRONTEND_GUIDE.md)
+
+### "How do I assign teachers to classes?"
+→ Check [../TEACHER_ASSIGNMENT_GUIDE.md](../TEACHER_ASSIGNMENT_GUIDE.md)
 
 ### "What do I need to change before deploying?"
 → Follow [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md)
@@ -247,11 +261,12 @@ Before deploying, ensure you have:
 
 ## 📊 Documentation Statistics
 
-- **Total Documentation Files**: 17+
-- **Total Pages**: 150+ pages of documentation
+- **Total Documentation Files**: 21+
+- **Total Pages**: 200+ pages of documentation
 - **Code Comments**: Extensive inline documentation
 - **API Endpoints Documented**: 60+
 - **Deployment Methods**: 3 (Automated, Manual, Git)
+- **Feature Guides**: Whiteboard, Teacher Assignment
 - **Troubleshooting Guides**: Complete with solutions
 
 ---
