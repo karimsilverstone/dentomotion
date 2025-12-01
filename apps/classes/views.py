@@ -29,7 +29,35 @@ from .serializers import (
             ),
         ]
     ),
-    create=extend_schema(summary="Create Class", tags=['Classes']),
+    create=extend_schema(
+        summary="Create Class",
+        tags=['Classes'],
+        description="""
+        Create a new class with optional teachers and students.
+        
+        **Optional Fields:**
+        - `teacher_ids`: Array of teacher IDs to assign (max 3 per teacher)
+        - `student_ids`: Array of student IDs to enroll
+        
+        **Example:**
+        ```json
+        {
+          "centre": 1,
+          "name": "Math 101",
+          "level_or_age_group": "Grade 5",
+          "teacher_ids": [10, 11],
+          "student_ids": [20, 21, 22]
+        }
+        ```
+        
+        **Notes:**
+        - Teachers and students are optional
+        - Teachers must have role='TEACHER'
+        - Students must have role='STUDENT'
+        - Students must be in the same centre as the class
+        - Teachers can be assigned to max 3 classes
+        """
+    ),
     retrieve=extend_schema(summary="Get Class Details", tags=['Classes']),
     update=extend_schema(summary="Update Class", tags=['Classes']),
     partial_update=extend_schema(summary="Partial Update Class", tags=['Classes']),
@@ -75,6 +103,32 @@ class ClassViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return ClassCreateSerializer
         return ClassSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """Create a new class with optional teachers and students"""
+        # Validate permissions first
+        if request.user.role not in ['SUPER_ADMIN', 'CENTRE_MANAGER']:
+            return Response(
+                {'error': 'You do not have permission to create classes.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Centre Manager can only create classes in their centre
+        if request.user.role == 'CENTRE_MANAGER':
+            if request.data.get('centre') != request.user.centre.id:
+                return Response(
+                    {'error': 'You can only create classes in your own centre.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        # Use the create serializer
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        class_instance = serializer.save()
+        
+        # Return the full class details using ClassSerializer
+        output_serializer = ClassSerializer(class_instance)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
     
     def create(self, request, *args, **kwargs):
         """Only Super Admin and Centre Managers can create classes"""
