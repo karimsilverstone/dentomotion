@@ -166,7 +166,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
+    'PAGE_SIZE': 10,
     'PAGE_SIZE_QUERY_PARAM': 'page_size',  # Allow client to override page size with ?page_size=50
     'MAX_PAGE_SIZE': 100,  # Maximum allowed page size
     'DEFAULT_RENDERER_CLASSES': [
