@@ -192,6 +192,56 @@ class UserViewSet(viewsets.ModelViewSet):
         
         return super().create(request, *args, **kwargs)
     
+    @extend_schema(
+        summary="Get Current User Profile",
+        description="""
+        Get the profile and information of the currently authenticated user.
+        
+        Returns complete user information including:
+        - Personal details (name, email, phone)
+        - Role and permissions
+        - Centre information
+        - Account status
+        - Last login timestamp
+        
+        **Use this endpoint to:**
+        - Display user profile in the app
+        - Check current user's role and permissions
+        - Get user's centre information
+        - Show account details in settings
+        
+        **Example Response:**
+        ```json
+        {
+          "id": 10,
+          "email": "john.doe@example.com",
+          "first_name": "John",
+          "last_name": "Doe",
+          "phone_number": "+1234567890",
+          "role": "TEACHER",
+          "centre": {
+            "id": 1,
+            "name": "Downtown Centre",
+            "location": "123 Main St"
+          },
+          "is_active": true,
+          "last_login": "2024-01-15T10:30:00Z",
+          "date_joined": "2024-01-01T00:00:00Z"
+        }
+        ```
+        """,
+        tags=['Users'],
+        responses={
+            200: UserSerializer,
+            401: {'description': 'Unauthorized - Invalid or missing token'}
+        }
+    )
+    @action(detail=False, methods=['get'], url_path='me')
+    def me(self, request):
+        """Get current user profile"""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+    
     @action(detail=False, methods=['post'], url_path='change-password')
     def change_password(self, request):
         """Change user password"""
