@@ -14,6 +14,22 @@ from .serializers import (
     list=extend_schema(
         summary="List Classes",
         tags=['Classes'],
+        description="""
+        List classes with optional filtering.
+        
+        **Filters:**
+        - `centre` - Filter by centre ID
+        - `teacher` - Filter by teacher ID (classes taught by this teacher)
+        - `student` - Filter by student ID (classes student is enrolled in)
+        - `search` - Search by class name
+        
+        **Examples:**
+        - `/api/classes/` - All accessible classes
+        - `/api/classes/?centre=1` - Classes in centre 1
+        - `/api/classes/?teacher=10` - Classes taught by teacher 10
+        - `/api/classes/?student=20` - Classes student 20 is enrolled in
+        - `/api/classes/?search=math` - Classes with "math" in name
+        """,
         parameters=[
             OpenApiParameter(
                 name='page',
@@ -26,6 +42,34 @@ from .serializers import (
                 type=OpenApiTypes.INT,
                 location=OpenApiParameter.QUERY,
                 description='Number of items per page (max 100)'
+            ),
+            OpenApiParameter(
+                name='centre',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Filter by centre ID',
+                required=False
+            ),
+            OpenApiParameter(
+                name='teacher',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Filter by teacher ID (classes taught by this teacher)',
+                required=False
+            ),
+            OpenApiParameter(
+                name='student',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Filter by student ID (classes student is enrolled in)',
+                required=False
+            ),
+            OpenApiParameter(
+                name='search',
+                type=OpenApiTypes.STR,
+                location=OpenApiParameter.QUERY,
+                description='Search by class name',
+                required=False
             ),
         ]
     ),
@@ -74,30 +118,58 @@ class ClassViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         
-        # Super Admin sees all classes
+        # Base queryset based on user role
         if user.role == 'SUPER_ADMIN':
-            return Class.objects.all().select_related('centre').prefetch_related(
+            queryset = Class.objects.all().select_related('centre').prefetch_related(
                 'teacher_assignments__teacher', 'enrolments__student'
             )
-        
-        # Centre Manager and Teachers see classes in their centre
-        if user.role in ['CENTRE_MANAGER', 'TEACHER'] and user.centre:
+        elif user.role in ['CENTRE_MANAGER', 'TEACHER'] and user.centre:
             queryset = Class.objects.filter(centre=user.centre).select_related('centre')
             
             # Teachers only see their assigned classes
             if user.role == 'TEACHER':
                 queryset = queryset.filter(teacher_assignments__teacher=user)
             
-            return queryset.prefetch_related('teacher_assignments__teacher', 'enrolments__student')
-        
-        # Students see classes they're enrolled in
-        if user.role == 'STUDENT':
-            return Class.objects.filter(
+            queryset = queryset.prefetch_related('teacher_assignments__teacher', 'enrolments__student')
+        elif user.role == 'STUDENT':
+            queryset = Class.objects.filter(
                 enrolments__student=user,
                 enrolments__is_active=True
             ).select_related('centre').prefetch_related('teacher_assignments__teacher')
+        else:
+            queryset = Class.objects.none()
         
-        return Class.objects.none()
+        # Apply filters
+        # Filter by centre
+        centre_param = self.request.query_params.get('centre', None)
+        if centre_param:
+            try:
+                queryset = queryset.filter(centre_id=int(centre_param))
+            except ValueError:
+                queryset = queryset.none()
+        
+        # Filter by teacher
+        teacher_param = self.request.query_params.get('teacher', None)
+        if teacher_param:
+            try:
+                queryset = queryset.filter(teacher_assignments__teacher_id=int(teacher_param))
+            except ValueError:
+                queryset = queryset.none()
+        
+        # Filter by student
+        student_param = self.request.query_params.get('student', None)
+        if student_param:
+            try:
+                queryset = queryset.filter(enrolments__student_id=int(student_param), enrolments__is_active=True)
+            except ValueError:
+                queryset = queryset.none()
+        
+        # Search by name
+        search_param = self.request.query_params.get('search', None)
+        if search_param:
+            queryset = queryset.filter(name__icontains=search_param)
+        
+        return queryset.distinct()
     
     def get_serializer_class(self):
         if self.action == 'create':

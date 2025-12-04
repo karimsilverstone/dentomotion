@@ -29,7 +29,42 @@ from .serializers import (
             ),
         ]
     ),
-    create=extend_schema(summary="Create Centre", tags=['Centres']),
+    create=extend_schema(
+        summary="Create Centre",
+        tags=['Centres'],
+        description="""
+        Create a new centre with a designated Centre Manager.
+        
+        **Required Fields:**
+        - `name` - Centre name
+        - `country` - Country
+        - `city` - City
+        - `timezone` - Timezone (e.g., UTC, America/New_York)
+        - `centre_manager_id` - User ID to assign as Centre Manager
+        
+        **Note:** The user specified in `centre_manager_id` will:
+        - Be assigned the role CENTRE_MANAGER
+        - Be assigned to this centre
+        - Become the manager of this centre
+        
+        **To get available users for manager assignment:**
+        ```
+        GET /api/users/?role=TEACHER  # Or any non-admin user
+        GET /api/users/?role=PARENT   # Any user who isn't already a manager
+        ```
+        
+        **Example Request:**
+        ```json
+        {
+          "name": "Downtown Centre",
+          "country": "USA",
+          "city": "New York",
+          "timezone": "America/New_York",
+          "centre_manager_id": 15
+        }
+        ```
+        """
+    ),
     retrieve=extend_schema(summary="Get Centre Details", tags=['Centres']),
     update=extend_schema(summary="Update Centre", tags=['Centres']),
     partial_update=extend_schema(summary="Partial Update Centre", tags=['Centres']),

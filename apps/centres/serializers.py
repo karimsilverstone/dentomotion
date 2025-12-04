@@ -26,22 +26,92 @@ class CentreSerializer(serializers.ModelSerializer):
     holidays = HolidaySerializer(many=True, read_only=True)
     term_dates = TermDateSerializer(many=True, read_only=True)
     local_time = serializers.SerializerMethodField()
+    manager = serializers.SerializerMethodField()
     
     class Meta:
         model = Centre
         fields = [
             'id', 'name', 'country', 'city', 'timezone',
-            'holidays', 'term_dates', 'local_time',
+            'manager', 'holidays', 'term_dates', 'local_time',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_local_time(self, obj):
         return obj.get_local_time().isoformat()
+    
+    def get_manager(self, obj):
+        """Get the centre manager"""
+        from apps.users.models import User
+        try:
+            manager = User.objects.get(centre=obj, role='CENTRE_MANAGER')
+            return {
+                'id': manager.id,
+                'email': manager.email,
+                'first_name': manager.first_name,
+                'last_name': manager.last_name
+            }
+        except User.DoesNotExist:
+            return None
+        except User.MultipleObjectsReturned:
+            # If multiple managers, return the first one
+            manager = User.objects.filter(centre=obj, role='CENTRE_MANAGER').first()
+            return {
+                'id': manager.id,
+                'email': manager.email,
+                'first_name': manager.first_name,
+                'last_name': manager.last_name
+            } if manager else None
 
 
 class CentreCreateSerializer(serializers.ModelSerializer):
+    centre_manager_id = serializers.IntegerField(
+        write_only=True,
+        required=True,
+        help_text="ID of the user to assign as Centre Manager"
+    )
+    
     class Meta:
         model = Centre
-        fields = ['name', 'country', 'city', 'timezone']
+        fields = ['name', 'country', 'city', 'timezone', 'centre_manager_id']
+    
+    def validate_centre_manager_id(self, value):
+        """Validate that the user exists and can be a centre manager"""
+        from apps.users.models import User
+        
+        try:
+            user = User.objects.get(id=value)
+            
+            # Check if user is already managing a centre
+            if user.role == 'CENTRE_MANAGER' and user.centre is not None:
+                raise serializers.ValidationError(
+                    f"User {user.get_full_name()} is already managing another centre."
+                )
+            
+            # Check if user has a role that prevents being a manager
+            if user.role == 'SUPER_ADMIN':
+                raise serializers.ValidationError(
+                    "Super Admin cannot be assigned as a Centre Manager."
+                )
+            
+            return value
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found.")
+    
+    def create(self, validated_data):
+        """Create centre and assign manager"""
+        from apps.users.models import User
+        
+        centre_manager_id = validated_data.pop('centre_manager_id')
+        
+        # Create the centre
+        centre = Centre.objects.create(**validated_data)
+        
+        # Assign the user as centre manager
+        user = User.objects.get(id=centre_manager_id)
+        user.role = 'CENTRE_MANAGER'
+        user.centre = centre
+        user.save(update_fields=['role', 'centre'])
+        
+        return centre
 
