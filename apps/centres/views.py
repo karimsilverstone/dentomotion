@@ -68,7 +68,44 @@ from .serializers import (
     retrieve=extend_schema(summary="Get Centre Details", tags=['Centres']),
     update=extend_schema(summary="Update Centre", tags=['Centres']),
     partial_update=extend_schema(summary="Partial Update Centre", tags=['Centres']),
-    destroy=extend_schema(summary="Delete Centre", tags=['Centres']),
+    destroy=extend_schema(
+        summary="Delete Centre",
+        tags=['Centres'],
+        description="""
+        Delete a centre (Super Admin only).
+        
+        **Important:** A centre can only be deleted if:
+        - It has no users associated with it
+        - It has no classes associated with it
+        
+        **Before deleting a centre:**
+        1. Reassign or delete all users in the centre
+        2. Delete all classes in the centre
+        3. Then delete the centre
+        
+        **Error Responses:**
+        - 400: Centre has users or classes
+        - 403: Not authorized (not Super Admin)
+        - 404: Centre not found
+        """,
+        responses={
+            204: {'description': 'Centre deleted successfully'},
+            400: {
+                'description': 'Cannot delete - centre has associated users or classes',
+                'content': {
+                    'application/json': {
+                        'example': {
+                            'error': 'Cannot delete centre. There are 15 user(s) associated with this centre.',
+                            'detail': 'Please reassign or delete all users before deleting the centre.',
+                            'users_count': 15
+                        }
+                    }
+                }
+            },
+            403: {'description': 'Permission denied'},
+            404: {'description': 'Centre not found'}
+        }
+    ),
 )
 class CentreViewSet(viewsets.ModelViewSet):
     """
@@ -124,7 +161,43 @@ class CentreViewSet(viewsets.ModelViewSet):
                 {'error': 'Only Super Admin can delete centres.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        return super().destroy(request, *args, **kwargs)
+        
+        centre = self.get_object()
+        
+        # Check if centre has users
+        users_count = centre.users.count()
+        if users_count > 0:
+            return Response(
+                {
+                    'error': f'Cannot delete centre. There are {users_count} user(s) associated with this centre.',
+                    'detail': 'Please reassign or delete all users before deleting the centre.',
+                    'users_count': users_count
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if centre has classes
+        classes_count = centre.classes.count()
+        if classes_count > 0:
+            return Response(
+                {
+                    'error': f'Cannot delete centre. There are {classes_count} class(es) associated with this centre.',
+                    'detail': 'Please delete all classes before deleting the centre.',
+                    'classes_count': classes_count
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Failed to delete centre.',
+                    'detail': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['get', 'post'], url_path='holidays')
     def holidays(self, request, pk=None):
