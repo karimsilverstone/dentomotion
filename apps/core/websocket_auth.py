@@ -1,0 +1,67 @@
+"""
+Custom JWT authentication middleware for Django Channels WebSocket connections
+"""
+from channels.middleware import BaseMiddleware
+from channels.db import database_sync_to_async
+from django.contrib.auth.models import AnonymousUser
+from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from urllib.parse import parse_qs
+
+
+@database_sync_to_async
+def get_user_from_token(token_key):
+    """Get user from JWT token"""
+    from apps.users.models import User
+    
+    try:
+        # Validate token and get user_id
+        access_token = AccessToken(token_key)
+        user_id = access_token['user_id']
+        
+        # Get user from database
+        user = User.objects.get(id=user_id)
+        return user
+    except (InvalidToken, TokenError, User.DoesNotExist, KeyError):
+        return AnonymousUser()
+
+
+class JWTAuthMiddleware(BaseMiddleware):
+    """
+    Custom middleware to authenticate WebSocket connections using JWT tokens.
+    
+    Supports token in:
+    1. Query parameter: ?token=YOUR_JWT_TOKEN
+    2. Headers: Authorization: Bearer YOUR_JWT_TOKEN (if supported by client)
+    """
+    
+    async def __call__(self, scope, receive, send):
+        # Get token from query string
+        query_string = scope.get('query_string', b'').decode()
+        query_params = parse_qs(query_string)
+        token = query_params.get('token', [None])[0]
+        
+        # If no token in query string, try headers
+        if not token:
+            headers = dict(scope.get('headers', []))
+            auth_header = headers.get(b'authorization', b'').decode()
+            
+            if auth_header.startswith('Bearer '):
+                token = auth_header.split(' ')[1]
+        
+        # Authenticate user with token
+        if token:
+            scope['user'] = await get_user_from_token(token)
+        else:
+            scope['user'] = AnonymousUser()
+        
+        return await super().__call__(scope, receive, send)
+
+
+def JWTAuthMiddlewareStack(inner):
+    """
+    Helper function to wrap URLRouter with JWT authentication.
+    Use this instead of AuthMiddlewareStack for WebSocket routes.
+    """
+    return JWTAuthMiddleware(inner)
+
