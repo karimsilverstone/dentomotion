@@ -20,21 +20,39 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
         
         # Verify user is authenticated
         user = self.scope['user']
+        
+        # Debug logging
+        print(f"[WEBSOCKET] Connection attempt for session {self.session_id}")
+        print(f"[WEBSOCKET] User: {user}")
+        print(f"[WEBSOCKET] Is authenticated: {user.is_authenticated}")
+        
         if not user.is_authenticated:
-            await self.close()
+            print(f"[WEBSOCKET] ❌ User not authenticated - closing connection")
+            await self.close(code=1008)
             return
         
         # Verify session exists and is active
         session = await self.get_session(self.session_id)
-        if not session or not session.is_active:
-            await self.close()
+        if not session:
+            print(f"[WEBSOCKET] ❌ Session {self.session_id} not found")
+            await self.close(code=3000)
             return
+        
+        if not session.is_active:
+            print(f"[WEBSOCKET] ❌ Session {self.session_id} is not active")
+            await self.close(code=3001)
+            return
+        
+        print(f"[WEBSOCKET] ✅ Session {self.session_id} is valid and active")
         
         # Verify user has access to this session
         has_access = await self.verify_access(user, session)
         if not has_access:
-            await self.close()
+            print(f"[WEBSOCKET] ❌ User {user.id} does not have access to session {self.session_id}")
+            await self.close(code=3002)
             return
+        
+        print(f"[WEBSOCKET] ✅ User {user.id} ({user.role}) has access to session")
         
         # Join room group
         await self.channel_layer.group_add(
@@ -42,7 +60,11 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         
+        print(f"[WEBSOCKET] ✅ User {user.id} joined room {self.room_group_name}")
+        
         await self.accept()
+        
+        print(f"[WEBSOCKET] ✅ WebSocket connection accepted for user {user.id}")
         
         # Send join notification to room
         await self.channel_layer.group_send(
@@ -54,6 +76,8 @@ class WhiteboardConsumer(AsyncWebsocketConsumer):
                 'user_role': user.role
             }
         )
+        
+        print(f"[WEBSOCKET] ✅ Sent user_joined notification for {user.get_full_name()}")
     
     async def disconnect(self, close_code):
         user = self.scope['user']
