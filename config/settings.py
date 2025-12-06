@@ -89,6 +89,11 @@ CHANNEL_LAYERS = {
     },
 }
 
+# For production with Redis password, use:
+# REDIS_URL=redis://:password@redis:6379/0
+# For development without password, use:
+# REDIS_URL=redis://localhost:6379/0
+
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
