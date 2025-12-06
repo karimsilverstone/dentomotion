@@ -56,6 +56,9 @@ services:
       - static_files:/app/staticfiles
     ports:
       - "8000:8000"
+    environment:
+      - REDIS_URL=redis://:redis123@redis:6379/0
+      - REDIS_PASSWORD=redis123
     env_file:
       - .env
     depends_on:
