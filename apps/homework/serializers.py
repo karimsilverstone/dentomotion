@@ -6,11 +6,12 @@ from apps.users.serializers import UserSerializer
 class SubmissionSerializer(serializers.ModelSerializer):
     student = UserSerializer(read_only=True)
     is_late = serializers.SerializerMethodField()
+    file_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Submission
         fields = [
-            'id', 'homework', 'student', 'submitted_at', 'file',
+            'id', 'homework', 'student', 'submitted_at', 'file', 'file_url',
             'status', 'mark', 'feedback', 'graded_at', 'graded_by',
             'is_late', 'created_at', 'updated_at'
         ]
@@ -18,6 +19,15 @@ class SubmissionSerializer(serializers.ModelSerializer):
     
     def get_is_late(self, obj):
         return obj.is_late()
+    
+    def get_file_url(self, obj):
+        """Get full URL for the file"""
+        if obj.file:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
+        return None
 
 
 class SubmissionCreateSerializer(serializers.ModelSerializer):

@@ -234,7 +234,7 @@ class HomeworkViewSet(viewsets.ModelViewSet):
         
         homework = self.get_object()
         submissions = Submission.objects.filter(homework=homework).select_related('student')
-        serializer = SubmissionSerializer(submissions, many=True)
+        serializer = SubmissionSerializer(submissions, many=True, context={'request': request})
         return Response(serializer.data)
     
     @extend_schema(
