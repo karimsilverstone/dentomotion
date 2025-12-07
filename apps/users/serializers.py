@@ -53,7 +53,23 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'is_active']
+        fields = ['first_name', 'last_name', 'role', 'centre', 'is_active']
+        
+    def validate_role(self, value):
+        """Validate role change"""
+        # Only super admin or centre manager can change roles
+        request = self.context.get('request')
+        if request and request.user.role not in ['SUPER_ADMIN', 'CENTRE_MANAGER']:
+            raise serializers.ValidationError("You do not have permission to change user roles.")
+        return value
+    
+    def validate_centre(self, value):
+        """Validate centre change"""
+        # Only super admin can change centres
+        request = self.context.get('request')
+        if request and request.user.role != 'SUPER_ADMIN':
+            raise serializers.ValidationError("Only Super Admin can change user centres.")
+        return value
 
 
 class PasswordChangeSerializer(serializers.Serializer):

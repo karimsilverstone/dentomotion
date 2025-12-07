@@ -1,11 +1,11 @@
 from rest_framework import serializers
-from .models import Centre, Holiday, TermDate
+from .models import Centre, Holiday, TermDate, CentreManagerAssignment
 
 
 class HolidaySerializer(serializers.ModelSerializer):
     class Meta:
         model = Holiday
-        fields = ['id', 'centre', 'name', 'date', 'is_recurring']
+        fields = ['id', 'centre', 'name', 'description', 'date', 'is_recurring']
         read_only_fields = ['id']
 
 
@@ -41,27 +41,33 @@ class CentreSerializer(serializers.ModelSerializer):
         return obj.get_local_time().isoformat()
     
     def get_manager(self, obj):
-        """Get the centre manager"""
+        """Get all centre managers (can be multiple)"""
         from apps.users.models import User
+        
+        # Get managers through assignments
+        assignments = CentreManagerAssignment.objects.filter(centre=obj).select_related('manager')
+        
+        if assignments.exists():
+            return [{
+                'id': assignment.manager.id,
+                'email': assignment.manager.email,
+                'first_name': assignment.manager.first_name,
+                'last_name': assignment.manager.last_name,
+                'is_primary': assignment.is_primary
+            } for assignment in assignments]
+        
+        # Fallback: check old way (for backward compatibility)
         try:
             manager = User.objects.get(centre=obj, role='CENTRE_MANAGER')
-            return {
+            return [{
                 'id': manager.id,
                 'email': manager.email,
                 'first_name': manager.first_name,
-                'last_name': manager.last_name
-            }
-        except User.DoesNotExist:
-            return None
-        except User.MultipleObjectsReturned:
-            # If multiple managers, return the first one
-            manager = User.objects.filter(centre=obj, role='CENTRE_MANAGER').first()
-            return {
-                'id': manager.id,
-                'email': manager.email,
-                'first_name': manager.first_name,
-                'last_name': manager.last_name
-            } if manager else None
+                'last_name': manager.last_name,
+                'is_primary': True
+            }]
+        except (User.DoesNotExist, User.MultipleObjectsReturned):
+            return []
 
 
 class CentreUpdateSerializer(serializers.ModelSerializer):
@@ -123,18 +129,38 @@ class CentreUpdateSerializer(serializers.ModelSerializer):
                 role='CENTRE_MANAGER'
             ).first()
             
-            # Demote old manager (set role to TEACHER or keep current non-manager role)
+            # Remove old manager assignment (if changing)
             if old_manager and old_manager.id != centre_manager_id:
-                # Reset old manager
-                old_manager.role = 'TEACHER'  # or keep their original role if tracked
-                old_manager.centre = None
-                old_manager.save(update_fields=['role', 'centre'])
+                # Remove assignment for this centre
+                CentreManagerAssignment.objects.filter(
+                    manager=old_manager,
+                    centre=instance
+                ).delete()
+                
+                # If old manager has no other centres, demote them
+                if not CentreManagerAssignment.objects.filter(manager=old_manager).exists():
+                    old_manager.role = 'TEACHER'
+                    old_manager.centre = None
+                    old_manager.save(update_fields=['role', 'centre'])
             
             # Assign new manager
             new_manager = User.objects.get(id=centre_manager_id)
-            new_manager.role = 'CENTRE_MANAGER'
-            new_manager.centre = instance
-            new_manager.save(update_fields=['role', 'centre'])
+            
+            # Update role if not already a manager
+            if new_manager.role != 'CENTRE_MANAGER':
+                new_manager.role = 'CENTRE_MANAGER'
+                new_manager.save(update_fields=['role'])
+            
+            # Create or get assignment
+            assignment, created = CentreManagerAssignment.objects.get_or_create(
+                manager=new_manager,
+                centre=instance
+            )
+            
+            # Set primary centre if user doesn't have one
+            if new_manager.centre is None:
+                new_manager.centre = instance
+                new_manager.save(update_fields=['centre'])
         
         return instance
 
@@ -157,17 +183,14 @@ class CentreCreateSerializer(serializers.ModelSerializer):
         try:
             user = User.objects.get(id=value)
             
-            # Check if user is already managing a centre
-            if user.role == 'CENTRE_MANAGER' and user.centre is not None:
-                raise serializers.ValidationError(
-                    f"User {user.get_full_name()} is already managing another centre."
-                )
-            
             # Check if user has a role that prevents being a manager
             if user.role == 'SUPER_ADMIN':
                 raise serializers.ValidationError(
                     "Super Admin cannot be assigned as a Centre Manager."
                 )
+            
+            # Note: Centre managers can now manage multiple centres
+            # So we don't check if they're already managing another centre
             
             return value
         except User.DoesNotExist:
@@ -176,6 +199,7 @@ class CentreCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Create centre and assign manager"""
         from apps.users.models import User
+        from apps.core.models import CentreManagerAssignment
         
         centre_manager_id = validated_data.pop('centre_manager_id')
         
@@ -184,9 +208,22 @@ class CentreCreateSerializer(serializers.ModelSerializer):
         
         # Assign the user as centre manager
         user = User.objects.get(id=centre_manager_id)
-        user.role = 'CENTRE_MANAGER'
-        user.centre = centre
-        user.save(update_fields=['role', 'centre'])
+        
+        # Update user role if not already a manager
+        if user.role != 'CENTRE_MANAGER':
+            user.role = 'CENTRE_MANAGER'
+            user.save(update_fields=['role'])
+        
+        # Create manager assignment (allows multiple centres)
+        CentreManagerAssignment.objects.create(
+            manager=user,
+            centre=centre
+        )
+        
+        # Set primary centre if user doesn't have one
+        if user.centre is None:
+            user.centre = centre
+            user.save(update_fields=['centre'])
         
         return centre
 

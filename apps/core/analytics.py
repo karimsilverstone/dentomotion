@@ -83,6 +83,7 @@ class HomeworkTrendsView(APIView):
                 })
         
         return Response({
+            'type': 'HOMEWORK_TRENDS',
             'period': f'Last {days} days',
             'homework_by_date': list(homework_by_date),
             'submission_stats': submission_stats,
@@ -145,6 +146,7 @@ class StudentPerformanceView(APIView):
         overall_avg = all_submissions.aggregate(Avg('mark'))['mark__avg'] or 0
         
         return Response({
+            'type': 'STUDENT_PERFORMANCE',
             'overall_average_mark': round(overall_avg, 2),
             'total_students': students.count(),
             'student_stats': student_stats
@@ -216,6 +218,7 @@ class CentreOverviewView(APIView):
             })
         
         return Response({
+            'type': 'CENTRE_OVERVIEW',
             'centres': centre_data,
             'generated_at': timezone.now()
         })
@@ -284,6 +287,7 @@ class TeacherPerformanceView(APIView):
             })
         
         return Response({
+            'type': 'TEACHER_PERFORMANCE',
             'teachers': teacher_stats,
             'total_teachers': teachers.count()
         })

@@ -3,6 +3,39 @@ from django.utils import timezone as django_timezone
 import pytz
 
 
+class CentreManagerAssignment(models.Model):
+    """Links centre managers to centres (many-to-many)"""
+    
+    manager = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='managed_centres',
+        limit_choices_to={'role': 'CENTRE_MANAGER'}
+    )
+    centre = models.ForeignKey(
+        'Centre',
+        on_delete=models.CASCADE,
+        related_name='manager_assignments'
+    )
+    assigned_at = models.DateTimeField(default=django_timezone.now)
+    is_primary = models.BooleanField(
+        default=False,
+        help_text='Primary centre for this manager'
+    )
+    
+    class Meta:
+        verbose_name = 'Centre Manager Assignment'
+        verbose_name_plural = 'Centre Manager Assignments'
+        unique_together = [['manager', 'centre']]
+        indexes = [
+            models.Index(fields=['manager']),
+            models.Index(fields=['centre']),
+        ]
+    
+    def __str__(self):
+        return f"{self.manager.get_full_name()} → {self.centre.name}"
+
+
 class Centre(models.Model):
     """Centre model for multi-tenant support"""
     
@@ -43,6 +76,10 @@ class Holiday(models.Model):
         related_name='holidays'
     )
     name = models.CharField(max_length=200)
+    description = models.TextField(
+        blank=True,
+        help_text='Optional description or notes about the holiday'
+    )
     date = models.DateField()
     is_recurring = models.BooleanField(
         default=False,

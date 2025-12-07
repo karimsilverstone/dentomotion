@@ -59,6 +59,8 @@ class TeacherDashboardView(APIView):
         ).select_related('class_instance').order_by('due_date')
         
         return Response({
+            'type': 'TEACHER_DASHBOARD',
+            'user_role': 'TEACHER',
             'overview': {
                 'total_classes': my_classes.count(),
                 'pending_marking': pending_marking.count(),
@@ -239,6 +241,8 @@ class ManagerDashboardView(APIView):
         ).select_related('class_instance', 'teacher')
         
         return Response({
+            'type': 'MANAGER_DASHBOARD',
+            'user_role': 'CENTRE_MANAGER',
             'overview': {
                 'student_count': students.count(),
                 'teacher_count': teachers.count(),
@@ -386,6 +390,8 @@ class ParentDashboardView(APIView):
             })
         
         return Response({
+            'type': 'PARENT_DASHBOARD',
+            'user_role': 'PARENT',
             'students': students_data
         })
 
