@@ -23,15 +23,18 @@ class SubmissionSerializer(serializers.ModelSerializer):
 class SubmissionCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Submission
-        fields = ['homework', 'file']
-    
-    def create(self, validated_data):
-        validated_data['student'] = self.context['request'].user
-        validated_data['status'] = 'SUBMITTED'
-        validated_data['submitted_at'] = serializers.DateTimeField().to_representation(
-            serializers.DateTimeField().to_internal_value('now')
-        )
-        return super().create(validated_data)
+        fields = ['file']  # Only file field - homework comes from URL
+        
+    def validate_file(self, value):
+        """Validate file upload"""
+        if not value:
+            raise serializers.ValidationError("File is required for submission.")
+        
+        # Check file size (max 10MB)
+        if value.size > 10 * 1024 * 1024:
+            raise serializers.ValidationError("File size must not exceed 10MB.")
+        
+        return value
 
 
 class SubmissionGradeSerializer(serializers.ModelSerializer):

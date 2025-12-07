@@ -237,6 +237,53 @@ class HomeworkViewSet(viewsets.ModelViewSet):
         serializer = SubmissionSerializer(submissions, many=True)
         return Response(serializer.data)
     
+    @extend_schema(
+        summary="Submit Homework",
+        description="""
+        Submit homework as a student. Upload a file for the homework.
+        
+        **Important:**
+        - Only students can submit homework
+        - Student must be enrolled in the class
+        - File is required
+        - Max file size: 10MB
+        - Allowed formats: PDF, DOC, DOCX, TXT, JPG, JPEG, PNG, ZIP
+        
+        **Request:**
+        - Content-Type: multipart/form-data
+        - Body: file upload
+        
+        **Example using form-data:**
+        ```
+        file: [your file upload]
+        ```
+        
+        **JavaScript Example:**
+        ```javascript
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        
+        await fetch('/api/homework/5/submit/', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer TOKEN'
+            // Don't set Content-Type - browser sets it automatically
+          },
+          body: formData
+        });
+        ```
+        
+        **Note:** Can only submit once unless status is PENDING
+        """,
+        request=SubmissionCreateSerializer,
+        responses={
+            200: SubmissionSerializer,
+            201: SubmissionSerializer,
+            400: {'description': 'Already submitted or validation error'},
+            403: {'description': 'Not enrolled in class or not a student'}
+        },
+        tags=['Homework']
+    )
     @action(detail=True, methods=['post'], url_path='submit')
     def submit(self, request, pk=None):
         """Submit homework (students only)"""
@@ -280,6 +327,7 @@ class HomeworkViewSet(viewsets.ModelViewSet):
             return Response(SubmissionSerializer(existing_submission).data)
         else:
             submission = serializer.save(
+                homework=homework,  # Set homework from URL
                 student=request.user,
                 status='SUBMITTED',
                 submitted_at=timezone.now()
