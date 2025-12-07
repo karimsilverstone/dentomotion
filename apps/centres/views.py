@@ -5,7 +5,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 from drf_spectacular.types import OpenApiTypes
 from .models import Centre, Holiday, TermDate
 from .serializers import (
-    CentreSerializer, CentreCreateSerializer,
+    CentreSerializer, CentreCreateSerializer, CentreUpdateSerializer,
     HolidaySerializer, TermDateSerializer
 )
 
@@ -66,8 +66,76 @@ from .serializers import (
         """
     ),
     retrieve=extend_schema(summary="Get Centre Details", tags=['Centres']),
-    update=extend_schema(summary="Update Centre", tags=['Centres']),
-    partial_update=extend_schema(summary="Partial Update Centre", tags=['Centres']),
+    update=extend_schema(
+        summary="Update Centre",
+        tags=['Centres'],
+        description="""
+        Update a centre with optional manager change.
+        
+        **Updatable Fields:**
+        - `name` - Centre name
+        - `country` - Country
+        - `city` - City
+        - `timezone` - Timezone
+        - `centre_manager_id` - New manager ID (optional)
+        
+        **Changing Centre Manager:**
+        If you provide `centre_manager_id`:
+        - The old manager will be demoted to TEACHER role
+        - The old manager's centre assignment will be removed
+        - The new user will become CENTRE_MANAGER
+        - The new user will be assigned to this centre
+        
+        **Example: Update centre and change manager**
+        ```json
+        {
+          "name": "Updated Centre Name",
+          "country": "USA",
+          "city": "Boston",
+          "timezone": "America/New_York",
+          "centre_manager_id": 20
+        }
+        ```
+        
+        **Example: Update centre without changing manager**
+        ```json
+        {
+          "name": "Updated Centre Name",
+          "city": "Los Angeles"
+        }
+        ```
+        
+        **Note:** Only Super Admin can update centres.
+        """
+    ),
+    partial_update=extend_schema(
+        summary="Partial Update Centre",
+        tags=['Centres'],
+        description="""
+        Partially update a centre (only provided fields are updated).
+        
+        **Optional Fields:**
+        - `name`
+        - `country`
+        - `city`
+        - `timezone`
+        - `centre_manager_id` - Change manager
+        
+        **Example: Only change manager**
+        ```json
+        {
+          "centre_manager_id": 25
+        }
+        ```
+        
+        **Example: Only change name**
+        ```json
+        {
+          "name": "New Centre Name"
+        }
+        ```
+        """
+    ),
     destroy=extend_schema(
         summary="Delete Centre",
         tags=['Centres'],
@@ -134,6 +202,8 @@ class CentreViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return CentreCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return CentreUpdateSerializer
         return CentreSerializer
     
     def create(self, request, *args, **kwargs):
@@ -152,7 +222,17 @@ class CentreViewSet(viewsets.ModelViewSet):
                 {'error': 'Only Super Admin can update centres.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        return super().update(request, *args, **kwargs)
+        
+        # Use the update serializer and return full centre details
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        # Return full centre details with manager info
+        output_serializer = CentreSerializer(instance)
+        return Response(output_serializer.data)
     
     def destroy(self, request, *args, **kwargs):
         """Only Super Admin can delete centres"""

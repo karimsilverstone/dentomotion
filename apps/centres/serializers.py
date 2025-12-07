@@ -64,6 +64,81 @@ class CentreSerializer(serializers.ModelSerializer):
             } if manager else None
 
 
+class CentreUpdateSerializer(serializers.ModelSerializer):
+    centre_manager_id = serializers.IntegerField(
+        write_only=True,
+        required=False,
+        allow_null=True,
+        help_text="ID of the user to assign as new Centre Manager (optional)"
+    )
+    
+    class Meta:
+        model = Centre
+        fields = ['name', 'country', 'city', 'timezone', 'centre_manager_id']
+    
+    def validate_centre_manager_id(self, value):
+        """Validate that the user exists and can be a centre manager"""
+        if value is None:
+            return value
+            
+        from apps.users.models import User
+        
+        try:
+            user = User.objects.get(id=value)
+            
+            # Check if user is already managing a different centre
+            if user.role == 'CENTRE_MANAGER' and user.centre is not None:
+                # Allow if they're managing THIS centre (no change)
+                if user.centre.id != self.instance.id:
+                    raise serializers.ValidationError(
+                        f"User {user.get_full_name()} is already managing another centre."
+                    )
+            
+            # Check if user has a role that prevents being a manager
+            if user.role == 'SUPER_ADMIN':
+                raise serializers.ValidationError(
+                    "Super Admin cannot be assigned as a Centre Manager."
+                )
+            
+            return value
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found.")
+    
+    def update(self, instance, validated_data):
+        """Update centre and optionally change manager"""
+        from apps.users.models import User
+        
+        centre_manager_id = validated_data.pop('centre_manager_id', None)
+        
+        # Update centre basic fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Change manager if new manager_id provided
+        if centre_manager_id is not None:
+            # Get the old manager (if exists)
+            old_manager = User.objects.filter(
+                centre=instance,
+                role='CENTRE_MANAGER'
+            ).first()
+            
+            # Demote old manager (set role to TEACHER or keep current non-manager role)
+            if old_manager and old_manager.id != centre_manager_id:
+                # Reset old manager
+                old_manager.role = 'TEACHER'  # or keep their original role if tracked
+                old_manager.centre = None
+                old_manager.save(update_fields=['role', 'centre'])
+            
+            # Assign new manager
+            new_manager = User.objects.get(id=centre_manager_id)
+            new_manager.role = 'CENTRE_MANAGER'
+            new_manager.centre = instance
+            new_manager.save(update_fields=['role', 'centre'])
+        
+        return instance
+
+
 class CentreCreateSerializer(serializers.ModelSerializer):
     centre_manager_id = serializers.IntegerField(
         write_only=True,
