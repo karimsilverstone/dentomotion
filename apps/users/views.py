@@ -242,13 +242,28 @@ class UserViewSet(viewsets.ModelViewSet):
         if user.role == 'CENTRE_MANAGER':
             if user.centre:
                 issues.append(f'Managing centre: {user.centre.name}')
+            
+            # Check CentreManagerAssignment if exists
+            try:
+                from apps.centres.models import CentreManagerAssignment
+                manager_assignments = CentreManagerAssignment.objects.filter(manager=user).count()
+                if manager_assignments > 0:
+                    issues.append(f'{manager_assignments} centre assignment(s)')
+            except Exception:
+                pass
+        
+        # Check if user has a centre assigned (will cause PROTECT error)
+        if user.centre is not None:
+            # Need to remove centre assignment first
+            issues.append(f'Assigned to centre: {user.centre.name} (must be removed first)')
         
         if issues:
             return Response(
                 {
                     'error': f'Cannot delete user. User has associated data.',
                     'detail': 'Please remove the following before deleting:',
-                    'issues': issues
+                    'issues': issues,
+                    'suggestion': 'First update user to remove centre assignment: PATCH /api/users/{id}/ {"centre": null}'
                 },
                 status=status.HTTP_400_BAD_REQUEST
             )
@@ -256,12 +271,16 @@ class UserViewSet(viewsets.ModelViewSet):
         try:
             return super().destroy(request, *args, **kwargs)
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            
             return Response(
                 {
                     'error': 'Failed to delete user.',
-                    'detail': str(e)
+                    'detail': str(e),
+                    'technical_details': error_details if request.user.role == 'SUPER_ADMIN' else 'Contact administrator'
                 },
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status=status.HTTP_400_BAD_REQUEST
             )
     
     @extend_schema(
