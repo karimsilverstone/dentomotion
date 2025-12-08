@@ -334,6 +334,44 @@ class HomeworkViewSet(viewsets.ModelViewSet):
             )
             return Response(SubmissionSerializer(submission).data, status=status.HTTP_201_CREATED)
     
+    @extend_schema(
+        summary="Grade Homework Submission",
+        description="""
+        Grade a student's homework submission.
+        
+        **Required Fields:**
+        - `mark` - Grade (0-100)
+        - `feedback` - Feedback text (optional but recommended)
+        
+        **Example:**
+        ```json
+        {
+          "mark": 85,
+          "feedback": "Great work! Well explained."
+        }
+        ```
+        
+        **Permissions:**
+        - Only teachers can grade
+        - Teacher must be assigned to the class
+        - Submission must exist and be submitted
+        """,
+        request=SubmissionGradeSerializer,
+        responses={
+            200: SubmissionSerializer,
+            403: {'description': 'Permission denied'},
+            404: {'description': 'Submission not found'}
+        },
+        tags=['Homework'],
+        parameters=[
+            OpenApiParameter(
+                name='submission_id',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.PATH,
+                description='ID of the submission to grade'
+            )
+        ]
+    )
     @action(detail=True, methods=['post'], url_path='grade/(?P<submission_id>[^/.]+)')
     def grade(self, request, pk=None, submission_id=None):
         """Grade a submission (teachers only)"""
@@ -360,6 +398,13 @@ class HomeworkViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
         
+        # Check submission is in submitted status
+        if submission.status not in ['SUBMITTED', 'GRADED']:
+            return Response(
+                {'error': 'Can only grade submitted homework.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         serializer = SubmissionGradeSerializer(submission, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(
@@ -368,7 +413,8 @@ class HomeworkViewSet(viewsets.ModelViewSet):
             graded_by=request.user
         )
         
-        return Response(SubmissionSerializer(submission).data)
+        # Return with context for file_url
+        return Response(SubmissionSerializer(submission, context={'request': request}).data)
 
 
 @extend_schema_view(

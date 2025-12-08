@@ -13,7 +13,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from apps.users.views import UserViewSet, AuthViewSet
+from apps.users.views import UserViewSet, AuthViewSet, ParentStudentLinkViewSet
 from apps.centres.views import CentreViewSet, HolidayViewSet, TermDateViewSet
 from apps.classes.views import ClassViewSet
 from apps.homework.views import HomeworkViewSet, SubmissionViewSet
@@ -25,6 +25,7 @@ router = DefaultRouter()
 
 # Register viewsets
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'parent-student-links', ParentStudentLinkViewSet, basename='parent-student-link')
 router.register(r'centres', CentreViewSet, basename='centre')
 router.register(r'holidays', HolidayViewSet, basename='holiday')
 router.register(r'terms', TermDateViewSet, basename='termdate')
@@ -61,6 +62,7 @@ urlpatterns = [
         path('student/', __import__('apps.core.dashboards', fromlist=['StudentDashboardView']).StudentDashboardView.as_view(), name='student-dashboard'),
         path('manager/', __import__('apps.core.dashboards', fromlist=['ManagerDashboardView']).ManagerDashboardView.as_view(), name='manager-dashboard'),
         path('parent/', __import__('apps.core.dashboards', fromlist=['ParentDashboardView']).ParentDashboardView.as_view(), name='parent-dashboard'),
+        path('admin/', __import__('apps.core.dashboards', fromlist=['SuperAdminDashboardView']).SuperAdminDashboardView.as_view(), name='admin-dashboard'),
     ])),
     
     # Analytics (Phase 3)

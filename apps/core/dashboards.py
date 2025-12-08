@@ -395,3 +395,95 @@ class ParentDashboardView(APIView):
             'students': students_data
         })
 
+
+class SuperAdminDashboardView(APIView):
+    """
+    Dashboard for Super Admin
+    Shows: System-wide statistics, all centres overview
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        if request.user.role != 'SUPER_ADMIN':
+            return Response({'error': 'This endpoint is for Super Admin only.'}, status=403)
+        
+        from apps.centres.models import Centre
+        from apps.users.models import User
+        
+        # System-wide counts
+        total_centres = Centre.objects.count()
+        total_users = User.objects.filter(is_active=True).count()
+        total_students = User.objects.filter(role='STUDENT', is_active=True).count()
+        total_teachers = User.objects.filter(role='TEACHER', is_active=True).count()
+        total_managers = User.objects.filter(role='CENTRE_MANAGER', is_active=True).count()
+        total_parents = User.objects.filter(role='PARENT', is_active=True).count()
+        total_classes = Class.objects.count()
+        
+        # Homework statistics
+        total_homework = Homework.objects.count()
+        total_submissions = Submission.objects.count()
+        pending_marking = Submission.objects.filter(status='SUBMITTED').count()
+        
+        # Recent activity
+        recent_users = User.objects.filter(
+            date_joined__gte=timezone.now() - timedelta(days=30)
+        ).count()
+        
+        recent_homework = Homework.objects.filter(
+            assigned_date__gte=timezone.now() - timedelta(days=30)
+        ).count()
+        
+        # Active sessions
+        active_sessions = WhiteboardSession.objects.filter(is_active=True).count()
+        
+        # Centre breakdown
+        centres_data = []
+        for centre in Centre.objects.all():
+            centre_students = User.objects.filter(centre=centre, role='STUDENT', is_active=True).count()
+            centre_teachers = User.objects.filter(centre=centre, role='TEACHER', is_active=True).count()
+            centre_classes = Class.objects.filter(centre=centre).count()
+            
+            centres_data.append({
+                'id': centre.id,
+                'name': centre.name,
+                'location': f"{centre.city}, {centre.country}",
+                'students': centre_students,
+                'teachers': centre_teachers,
+                'classes': centre_classes
+            })
+        
+        # Recent submissions
+        recent_submissions = Submission.objects.filter(
+            submitted_at__gte=timezone.now() - timedelta(days=7)
+        ).select_related('student', 'homework').order_by('-submitted_at')[:10]
+        
+        return Response({
+            'type': 'SUPER_ADMIN_DASHBOARD',
+            'user_role': 'SUPER_ADMIN',
+            'overview': {
+                'total_centres': total_centres,
+                'total_users': total_users,
+                'total_students': total_students,
+                'total_teachers': total_teachers,
+                'total_managers': total_managers,
+                'total_parents': total_parents,
+                'total_classes': total_classes,
+                'total_homework': total_homework,
+                'total_submissions': total_submissions,
+                'pending_marking': pending_marking,
+                'active_sessions': active_sessions
+            },
+            'recent_activity': {
+                'new_users_30d': recent_users,
+                'new_homework_30d': recent_homework
+            },
+            'centres': centres_data,
+            'recent_submissions': [{
+                'id': sub.id,
+                'student': sub.student.get_full_name(),
+                'homework': sub.homework.title,
+                'submitted_at': sub.submitted_at,
+                'status': sub.status
+            } for sub in recent_submissions]
+        })
+

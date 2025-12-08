@@ -6,12 +6,13 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
-from .models import User, ActivityLog
+from .models import User, ActivityLog, ParentStudentLink
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     PasswordChangeSerializer, ActivityLogSerializer,
     LoginSerializer, LoginResponseSerializer, LogoutSerializer,
-    PasswordResetRequestSerializer
+    PasswordResetRequestSerializer, ParentStudentLinkSerializer,
+    UserProfileSerializer
 )
 
 
@@ -279,6 +280,80 @@ class UserViewSet(viewsets.ModelViewSet):
         logs = ActivityLog.objects.filter(user=user)
         serializer = ActivityLogSerializer(logs, many=True)
         return Response(serializer.data)
+    
+    @extend_schema(
+        summary="Get User Complete Profile",
+        description="Get complete profile of a user by ID including relationships",
+        responses={200: UserProfileSerializer},
+        tags=['Users']
+    )
+    @action(detail=True, methods=['get'], url_path='profile')
+    def profile(self, request, pk=None):
+        """Get complete user profile by ID"""
+        user = self.get_object()
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data)
+
+
+@extend_schema_view(
+    list=extend_schema(summary="List Parent-Student Links", tags=['Users']),
+    create=extend_schema(summary="Link Parent to Student", tags=['Users']),
+    retrieve=extend_schema(summary="Get Link Details", tags=['Users']),
+    destroy=extend_schema(summary="Remove Parent-Student Link", tags=['Users']),
+)
+class ParentStudentLinkViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing parent-student links
+    Allows assigning parents to students
+    """
+    queryset = ParentStudentLink.objects.all()
+    serializer_class = ParentStudentLinkSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ['get', 'post', 'delete']  # No PUT/PATCH
+    
+    def get_queryset(self):
+        """Filter links based on user role"""
+        user = self.request.user
+        
+        # Super Admin sees all links
+        if user.role == 'SUPER_ADMIN':
+            return ParentStudentLink.objects.all().select_related('parent', 'student')
+        
+        # Centre Manager sees links in their centre
+        elif user.role == 'CENTRE_MANAGER':
+            return ParentStudentLink.objects.filter(
+                parent__centre=user.centre
+            ).select_related('parent', 'student')
+        
+        # Parents see their own links
+        elif user.role == 'PARENT':
+            return ParentStudentLink.objects.filter(parent=user).select_related('student')
+        
+        # Students see their parent links
+        elif user.role == 'STUDENT':
+            return ParentStudentLink.objects.filter(student=user).select_related('parent')
+        
+        return ParentStudentLink.objects.none()
+    
+    def create(self, request, *args, **kwargs):
+        """Create parent-student link (Super Admin or Centre Manager only)"""
+        if request.user.role not in ['SUPER_ADMIN', 'CENTRE_MANAGER']:
+            return Response(
+                {'error': 'Only Super Admin and Centre Managers can link parents to students.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().create(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Remove parent-student link (Super Admin or Centre Manager only)"""
+        if request.user.role not in ['SUPER_ADMIN', 'CENTRE_MANAGER']:
+            return Response(
+                {'error': 'Only Super Admin and Centre Managers can remove links.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().destroy(request, *args, **kwargs)
 
 
 class AuthViewSet(viewsets.ViewSet):
