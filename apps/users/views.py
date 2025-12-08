@@ -193,6 +193,77 @@ class UserViewSet(viewsets.ModelViewSet):
         
         return super().create(request, *args, **kwargs)
     
+    def destroy(self, request, *args, **kwargs):
+        """Delete a user (Super Admin only)"""
+        if request.user.role != 'SUPER_ADMIN':
+            return Response(
+                {'error': 'Only Super Admin can delete users.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        user = self.get_object()
+        
+        # Check if user has related data
+        from apps.classes.models import TeacherAssignment, Enrolment
+        from apps.homework.models import Homework, Submission
+        
+        issues = []
+        
+        # Check teacher assignments
+        if user.role == 'TEACHER':
+            assignments = TeacherAssignment.objects.filter(teacher=user).count()
+            if assignments > 0:
+                issues.append(f'{assignments} class assignment(s)')
+            
+            homework_count = Homework.objects.filter(teacher=user).count()
+            if homework_count > 0:
+                issues.append(f'{homework_count} homework assignment(s)')
+        
+        # Check student enrolments
+        if user.role == 'STUDENT':
+            enrolments = Enrolment.objects.filter(student=user).count()
+            if enrolments > 0:
+                issues.append(f'{enrolments} class enrolment(s)')
+            
+            submissions = Submission.objects.filter(student=user).count()
+            if submissions > 0:
+                issues.append(f'{submissions} homework submission(s)')
+        
+        # Check parent links
+        if user.role == 'PARENT':
+            try:
+                parent_links = ParentStudentLink.objects.filter(parent=user).count()
+                if parent_links > 0:
+                    issues.append(f'{parent_links} student link(s)')
+            except Exception:
+                pass  # Table might not exist yet
+        
+        # Check if user is managing a centre
+        if user.role == 'CENTRE_MANAGER':
+            if user.centre:
+                issues.append(f'Managing centre: {user.centre.name}')
+        
+        if issues:
+            return Response(
+                {
+                    'error': f'Cannot delete user. User has associated data.',
+                    'detail': 'Please remove the following before deleting:',
+                    'issues': issues
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {
+                    'error': 'Failed to delete user.',
+                    'detail': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     @extend_schema(
         summary="Get Current User Profile",
         description="""
