@@ -331,6 +331,17 @@ CORS_ALLOWED_ORIGINS = config(
 )
 CORS_ALLOW_CREDENTIALS = True
 
+# For development: Allow all origins (less secure, only for development!)
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    # Also add specific origins for WebSocket
+    CORS_ALLOWED_ORIGIN_REGEXES = [
+        r"^http://\d+\.\d+\.\d+\.\d+:\d+$",  # Allow any IP with port
+        r"^http://\d+\.\d+\.\d+\.\d+$",       # Allow any IP without port
+        r"^ws://\d+\.\d+\.\d+\.\d+:\d+$",     # WebSocket with port
+        r"^ws://\d+\.\d+\.\d+\.\d+$",         # WebSocket without port
+    ]
+
 # CSRF Trusted Origins (for production)
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
